@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Shark Swimming Animation</title>
+<title>Feed the Shark Game</title>
 
 <style>
   * {
@@ -14,56 +14,59 @@
 
   body {
     overflow: hidden;
-    height: 100vh;
-    background: linear-gradient(180deg, #0f3b5f, #06131f);
+    background: linear-gradient(180deg, #0d3b66, #06121f);
+    touch-action: none;
   }
 
   canvas {
     display: block;
   }
 
-  .title {
+  .ui {
     position: absolute;
     top: 15px;
     width: 100%;
     text-align: center;
     color: white;
     font-family: Arial;
-    opacity: 0.7;
     font-size: 16px;
+    opacity: 0.8;
+    z-index: 10;
   }
 </style>
 </head>
 
 <body>
 
-<div class="title">🦈 Shark is freely swimming...</div>
-<canvas id="ocean"></canvas>
+<div class="ui">🐟 Tap anywhere to feed the shark</div>
+<canvas id="game"></canvas>
 
 <script>
-const canvas = document.getElementById("ocean");
+const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-/* Shark object */
+/* SHARK */
+const sharkImg = new Image();
+sharkImg.src = "https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/White_shark.jpg/640px-White_shark.jpg";
+
 const shark = {
   x: canvas.width / 2,
   y: canvas.height / 2,
-  vx: (Math.random() - 0.5) * 4,
-  vy: (Math.random() - 0.5) * 4,
-  size: 80,
-  angle: 0
+  vx: 2,
+  vy: 1.5,
+  size: 90,
+  speed: 2.2
 };
 
-/* Load shark image */
-const img = new Image();
-img.src = "https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/White_shark.jpg/640px-White_shark.jpg";
+/* FOOD */
+let food = null;
 
-/* bubbles */
+/* BUBBLES */
 const bubbles = [];
-for (let i = 0; i < 30; i++) {
+for (let i = 0; i < 25; i++) {
   bubbles.push({
     x: Math.random() * canvas.width,
     y: Math.random() * canvas.height,
@@ -72,74 +75,102 @@ for (let i = 0; i < 30; i++) {
   });
 }
 
-/* update shark movement */
-function update() {
-  shark.x += shark.vx;
-  shark.y += shark.vy;
+/* TAP TO DROP FOOD */
+function dropFood(x, y) {
+  food = { x, y, r: 10 };
+}
 
-  /* bounce off walls */
+/* MOBILE + PC INPUT */
+window.addEventListener("touchstart", (e) => {
+  const t = e.touches[0];
+  dropFood(t.clientX, t.clientY);
+});
+
+window.addEventListener("click", (e) => {
+  dropFood(e.clientX, e.clientY);
+});
+
+/* SHARK AI */
+function updateShark() {
+  if (food) {
+    let dx = food.x - shark.x;
+    let dy = food.y - shark.y;
+    let dist = Math.sqrt(dx * dx + dy * dy);
+
+    shark.vx = (dx / dist) * shark.speed;
+    shark.vy = (dy / dist) * shark.speed;
+
+    shark.x += shark.vx;
+    shark.y += shark.vy;
+
+    /* eat food */
+    if (dist < 30) {
+      food = null;
+    }
+
+  } else {
+    /* random swimming */
+    shark.x += shark.vx;
+    shark.y += shark.vy;
+
+    shark.vx += (Math.random() - 0.5) * 0.2;
+    shark.vy += (Math.random() - 0.5) * 0.2;
+
+    const maxSpeed = 2.5;
+    shark.vx = Math.max(-maxSpeed, Math.min(maxSpeed, shark.vx));
+    shark.vy = Math.max(-maxSpeed, Math.min(maxSpeed, shark.vy));
+  }
+
+  /* bounce edges */
   if (shark.x < 0 || shark.x > canvas.width) shark.vx *= -1;
   if (shark.y < 0 || shark.y > canvas.height) shark.vy *= -1;
+}
 
-  shark.angle = Math.atan2(shark.vy, shark.vx);
-
-  /* slight random movement (natural swimming) */
-  shark.vx += (Math.random() - 0.5) * 0.2;
-  shark.vy += (Math.random() - 0.5) * 0.2;
-
-  /* limit speed */
-  const speedLimit = 3;
-  shark.vx = Math.max(-speedLimit, Math.min(speedLimit, shark.vx));
-  shark.vy = Math.max(-speedLimit, Math.min(speedLimit, shark.vy));
+/* DRAW */
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   /* bubbles */
+  ctx.fillStyle = "rgba(255,255,255,0.2)";
   for (let b of bubbles) {
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+    ctx.fill();
+
     b.y -= b.speed;
     if (b.y < 0) {
       b.y = canvas.height;
       b.x = Math.random() * canvas.width;
     }
   }
-}
 
-/* draw everything */
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  /* draw bubbles */
-  ctx.fillStyle = "rgba(255,255,255,0.2)";
-  for (let b of bubbles) {
+  /* food */
+  if (food) {
+    ctx.fillStyle = "orange";
     ctx.beginPath();
-    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+    ctx.arc(food.x, food.y, food.r, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  /* draw shark */
-  ctx.save();
-  ctx.translate(shark.x, shark.y);
-  ctx.rotate(shark.angle);
-
+  /* shark */
   ctx.drawImage(
-    img,
-    -shark.size / 2,
-    -shark.size / 2,
+    sharkImg,
+    shark.x - shark.size / 2,
+    shark.y - shark.size / 2,
     shark.size,
     shark.size
   );
-
-  ctx.restore();
 }
 
-/* animation loop */
+/* LOOP */
 function loop() {
-  update();
+  updateShark();
   draw();
   requestAnimationFrame(loop);
 }
 
-img.onload = () => loop();
+sharkImg.onload = loop;
 
-/* resize support */
 window.addEventListener("resize", () => {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
