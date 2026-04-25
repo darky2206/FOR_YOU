@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Shark Swimming Animation</title>
+
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    overflow: hidden;
+    height: 100vh;
+    background: linear-gradient(180deg, #0f3b5f, #06131f);
+  }
+
+  canvas {
+    display: block;
+  }
+
+  .title {
+    position: absolute;
+    top: 15px;
+    width: 100%;
+    text-align: center;
+    color: white;
+    font-family: Arial;
+    opacity: 0.7;
+    font-size: 16px;
+  }
+</style>
+</head>
+
+<body>
+
+<div class="title">🦈 Shark is freely swimming...</div>
+<canvas id="ocean"></canvas>
+
+<script>
+const canvas = document.getElementById("ocean");
+const ctx = canvas.getContext("2d");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+/* Shark object */
+const shark = {
+  x: canvas.width / 2,
+  y: canvas.height / 2,
+  vx: (Math.random() - 0.5) * 4,
+  vy: (Math.random() - 0.5) * 4,
+  size: 80,
+  angle: 0
+};
+
+/* Load shark image */
+const img = new Image();
+img.src = "https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/White_shark.jpg/640px-White_shark.jpg";
+
+/* bubbles */
+const bubbles = [];
+for (let i = 0; i < 30; i++) {
+  bubbles.push({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    r: Math.random() * 6 + 2,
+    speed: Math.random() * 1 + 0.5
+  });
+}
+
+/* update shark movement */
+function update() {
+  shark.x += shark.vx;
+  shark.y += shark.vy;
+
+  /* bounce off walls */
+  if (shark.x < 0 || shark.x > canvas.width) shark.vx *= -1;
+  if (shark.y < 0 || shark.y > canvas.height) shark.vy *= -1;
+
+  shark.angle = Math.atan2(shark.vy, shark.vx);
+
+  /* slight random movement (natural swimming) */
+  shark.vx += (Math.random() - 0.5) * 0.2;
+  shark.vy += (Math.random() - 0.5) * 0.2;
+
+  /* limit speed */
+  const speedLimit = 3;
+  shark.vx = Math.max(-speedLimit, Math.min(speedLimit, shark.vx));
+  shark.vy = Math.max(-speedLimit, Math.min(speedLimit, shark.vy));
+
+  /* bubbles */
+  for (let b of bubbles) {
+    b.y -= b.speed;
+    if (b.y < 0) {
+      b.y = canvas.height;
+      b.x = Math.random() * canvas.width;
+    }
+  }
+}
+
+/* draw everything */
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  /* draw bubbles */
+  ctx.fillStyle = "rgba(255,255,255,0.2)";
+  for (let b of bubbles) {
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  /* draw shark */
+  ctx.save();
+  ctx.translate(shark.x, shark.y);
+  ctx.rotate(shark.angle);
+
+  ctx.drawImage(
+    img,
+    -shark.size / 2,
+    -shark.size / 2,
+    shark.size,
+    shark.size
+  );
+
+  ctx.restore();
+}
+
+/* animation loop */
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+img.onload = () => loop();
+
+/* resize support */
+window.addEventListener("resize", () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+});
+</script>
+
+</body>
+</html>
